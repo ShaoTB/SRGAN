@@ -1,12 +1,7 @@
-import tensorflow as tf
-import numpy as np
-
-import sys
-sys.path.append('../utils')
-sys.path.append('../vgg19')
 from layer import *
-from vgg19 import VGG19
-vgg = VGG19(False)
+from VGG19.vgg19 import *
+
+vgg = Vgg19()
 
 class SRGAN:
     def __init__(self):
@@ -113,27 +108,24 @@ class SRGAN:
 
     def inference_losses(self, x, imitation, true_output, fake_output):
         def inference_content_loss(x, imitation):
-            _, x_phi = vgg.build_model(x, None, True)
-            _, imitation_phi = vgg.build_model(imitation, None, True)
-            content_loss = None
-            for i in range(len(x_phi)):
-                if content_loss is None:
-                    content_loss = tf.nn.l2_loss(x_phi[i] - imitation_phi[i])
-                else:
-                    content_loss = content_loss + tf.nn.l2_loss(x_phi[i] - imitation_phi[i])
+            true_vgg = vgg.build(x)
+            x_phi = true_vgg.conv5_4
+            fake_vgg = vgg.build(imitation)
+            imitation_phi = fake_vgg.conv5_4
+            content_loss = (x_phi - imitation_phi) ** 2
             return tf.reduce_mean(content_loss)
 
-        def inference_adversarial_loss(true_output, fake_output):
-            alpha = 1e-5
-            g_loss = tf.reduce_mean(tf.nn.l2_loss(fake_output - tf.ones_like(fake_output)))
-            d_loss_real = tf.reduce_mean(tf.nn.l2_loss(true_output - tf.ones_like(true_output)))
-            d_loss_fake = tf.reduce_mean(tf.nn.l2_loss(fake_output + tf.ones_like(fake_output)))
-            d_loss = d_loss_real + d_loss_fake
-            return (g_loss * alpha, d_loss * alpha)
+        def inference_adv_loss(true_output, fake_output):
+            alpha = 1e-3
+            g_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.ones_like(fake_output))
+            d_loss_true = tf.nn.sigmoid_cross_entropy_with_logits(logits=true_output, labels=tf.ones_like(true_output))
+            d_loss_fake = tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.zeros_like(fake_output))
+            d_loss = (d_loss_true + d_loss_fake) / 2
+            return g_loss * alpha, d_loss
 
         content_loss = inference_content_loss(x, imitation)
-        generator_loss, discriminator_loss = inference_adversarial_loss(true_output, fake_output)
+        generator_loss, discriminator_loss = inference_adv_loss(true_output, fake_output)
         g_loss = content_loss + generator_loss
         d_loss = discriminator_loss
-        return (g_loss, d_loss)
+        return g_loss, d_loss
 

@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
-import vgg16
 import utils
+import vgg16
 
 img1 = utils.load_image("./test_data/tiger.jpeg")
 img2 = utils.load_image("./test_data/puzzle.jpeg")

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def lrelu(x, trainbable=None):
+def lrelu(x):
     alpha = 0.2
     return tf.maximum(alpha * x, x)
 
