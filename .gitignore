@@ -1,1 +1,4 @@
 .idea
+VGG19/vgg19.npy
+VGG19/vgg16.npy
+*.pyc
