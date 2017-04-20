@@ -4,12 +4,13 @@ from VGG19.vgg19 import *
 vgg = Vgg19()
 
 class SRGAN:
-    def __init__(self):
+    def __init__(self, is_training=False):
         self.K = 4
-        self.img_dim = 96
+        self.height = 224
+        self.width = 224
         self.batch_size = 32
-        self.x = tf.placeholder(tf.float32, [self.batch_size, self.img_dim, self.img_dim, 3])
-        self.is_training = tf.placeholder(tf.bool)
+        self.x = tf.placeholder(tf.float32, [self.batch_size, self.height, self.width, 3])
+        self.is_training = is_training
         self.downscaled = self.downscale(self.x)
         self.imitation = self.generator(self.downscaled, self.is_training, False)
         self.true_output = self.discriminator(self.x, self.is_training, False)
@@ -19,33 +20,33 @@ class SRGAN:
     def generator(self, x, is_training, reuse):
         with tf.variable_scope('generator', reuse=reuse):
             with tf.variable_scope('deconv1'):
-                x = deconv_layer(x, [3, 3, 64, 3], [self.batch_size, 24, 24, 64], 1, 'deconv1')
+                x = deconv_layer(x, [3, 3, 64, 3], [self.batch_size, self.height / 4, self.width / 4, 64], 1, 'deconv1')
             x = tf.nn.relu(x)
             shortcut = x
             for i in range(5):
                 mid = x
                 with tf.variable_scope('block{}a'.format(i+1)):
-                    x = deconv_layer(x, [3, 3, 64, 64], [self.batch_size, 24, 24, 64], 1)
+                    x = deconv_layer(x, [3, 3, 64, 64], [self.batch_size, self.height / 4, self.width / 4, 64], 1)
                     x = batch_normalize(x, is_training)
                     x = tf.nn.relu(x)
                 with tf.variable_scope('block{}b'.format(i+1)):
-                    x = deconv_layer(x, [3, 3, 64, 64], [self.batch_size, 24, 24, 64], 1)
+                    x = deconv_layer(x, [3, 3, 64, 64], [self.batch_size, self.height / 4, self.width / 4, 64], 1)
                     x = batch_normalize(x, is_training)
                 x = tf.add(x, mid)
             with tf.variable_scope('deconv2'):
-                x = deconv_layer(x, [3, 3, 64, 64], [self.batch_size, 24, 24, 64], 1)
+                x = deconv_layer(x, [3, 3, 64, 64], [self.batch_size, self.height / 4, self.width / 4, 64], 1)
                 x = batch_normalize(x, is_training)
                 x = tf.add(x, shortcut)
             with tf.variable_scope('deconv3'):
-                x = deconv_layer(x, [3, 3, 256, 64], [self.batch_size, 24, 24, 256], 1)
-                x = pixel_shuffle_layer(x, 2, 64) # n_split = 256 / 2 ** 2
+                x = deconv_layer(x, [3, 3, 256, 64], [self.batch_size, self.height / 4, self.width / 4, 256], 1)
+                x = pixel_shuffle_layer(x, 2, 64)  # n_split = 256 / 2 ** 2
                 x = tf.nn.relu(x)
             with tf.variable_scope('deconv4'):
-                x = deconv_layer(x, [3, 3, 64, 64], [self.batch_size, 48, 48, 64], 1)
+                x = deconv_layer(x, [3, 3, 64, 64], [self.batch_size, self.height / 2, self.width / 2, 64], 1)
                 x = pixel_shuffle_layer(x, 2, 16)
                 x = tf.nn.relu(x)
             with tf.variable_scope('deconv5'):
-                x = deconv_layer(x, [3, 3, 3, 16], [self.batch_size, 96, 96, 3], 1)
+                x = deconv_layer(x, [3, 3, 3, 16], [self.batch_size, self.height, self.width, 3], 1)
 
         self.g_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator')
         return x
@@ -108,10 +109,10 @@ class SRGAN:
 
     def inference_losses(self, x, imitation, true_output, fake_output):
         def inference_content_loss(x, imitation):
-            true_vgg = vgg.build(x)
-            x_phi = true_vgg.conv5_4
-            fake_vgg = vgg.build(imitation)
-            imitation_phi = fake_vgg.conv5_4
+            vgg.build(x)
+            x_phi = vgg.conv5_4
+            vgg.build(imitation)
+            imitation_phi = vgg.conv5_4
             content_loss = (x_phi - imitation_phi) ** 2
             return tf.reduce_mean(content_loss)
 

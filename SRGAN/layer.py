@@ -61,12 +61,12 @@ def pixel_shuffle_layer(x, r, n_split):
         bs, a, b, c = x.get_shape().as_list()
         x = tf.reshape(x, (bs, a, b, r, r))
         x = tf.transpose(x, (0, 1, 2, 4, 3))
-        x = tf.split(1, a, x)
-        x = tf.concat(2, [tf.squeeze(x_) for x_ in x])
-        x = tf.split(1, b, x)
-        x = tf.concat(2, [tf.squeeze(x_) for x_ in x])
+        x = tf.split(x, a, 1)
+        x = tf.concat([tf.squeeze(x_) for x_ in x], 2)
+        x = tf.split(x, b, 1)
+        x = tf.concat([tf.squeeze(x_) for x_ in x], 2)
         return tf.reshape(x, (bs, a*r, b*r, 1))
-    xc = tf.split(3, n_split, x)
-    x = tf.concat(3, [PS(x_, r) for x_ in xc])
+    xc = tf.split(x, n_split, 3)
+    x = tf.concat([PS(x_, r) for x_ in xc], 3)
     return x
     
