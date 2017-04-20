@@ -3,7 +3,6 @@ import glob
 import cv2 
 import dlib
 import shutil
-import random
 import numpy as np
 import scipy.misc
 
