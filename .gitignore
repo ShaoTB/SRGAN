@@ -3,3 +3,4 @@
 *.npy
 lfw/test
 lfw/train
+SRGAN/backup/
