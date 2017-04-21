@@ -5,15 +5,17 @@ vgg = Vgg19()
 
 
 class SRGAN:
-    def __init__(self, x, is_training=False, batch_size=32, height=96, width=96):
+    def __init__(self, x, is_training=False, batch_size=32, height=96, width=96, channels=3):
         self.K = 4
         self.height = height
         self.width = width
         self.batch_size = batch_size
+        self.channels = channels
         self.x = x
         self.is_training = is_training
         self.downscaled = self.downscale(self.x)
         self.imitation = self.generator(self.downscaled, self.is_training, False)
+        tf.summary.image(self.imitation)
         self.true_output = self.discriminator(self.x, self.is_training, False)
         self.fake_output = self.discriminator(self.imitation, self.is_training, True)
         self.g_loss, self.d_loss = self.inference_losses(self.x, self.imitation, self.true_output, self.fake_output)
@@ -96,13 +98,7 @@ class SRGAN:
         return x
 
     def downscale(self, x):
-        K = self.K
-        arr = np.zeros([K, K, 3, 3])
-        arr[:, :, 0, 0] = 1.0 / K ** 2
-        arr[:, :, 1, 1] = 1.0 / K ** 2
-        arr[:, :, 2, 2] = 1.0 / K ** 2
-        weight = tf.constant(arr, dtype=tf.float32)
-        downscaled = tf.nn.conv2d(x, weight, strides=[1, K, K, 1], padding='SAME')
+        downscaled = tf.image.resize_images(x, [self.batch_size, self.height / self.K, self.width / self.K], method=tf.image.ResizeMethod.BICUBIC)
         return downscaled
 
     def inference_losses(self, x, imitation, true_output, fake_output):
