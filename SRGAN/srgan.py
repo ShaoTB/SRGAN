@@ -116,9 +116,9 @@ class SRGAN:
 
         def inference_adv_loss(true_output, fake_output):
             alpha = 1e-3
-            g_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.ones_like(fake_output)) * alpha
-            d_loss_true = tf.nn.sigmoid_cross_entropy_with_logits(logits=true_output, labels=tf.ones_like(true_output))
-            d_loss_fake = tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.zeros_like(fake_output))
+            g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.ones_like(fake_output))) * alpha
+            d_loss_true = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=true_output, labels=tf.ones_like(true_output)))
+            d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.zeros_like(fake_output)))
             d_loss = (d_loss_true + d_loss_fake) / 2
 
             tf.summary.histogram('g_loss', g_loss)
