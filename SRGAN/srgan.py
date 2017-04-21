@@ -3,13 +3,14 @@ from VGG19.vgg19 import *
 
 vgg = Vgg19()
 
+
 class SRGAN:
-    def __init__(self, is_training=False):
+    def __init__(self, x, is_training=False, batch_size=32, height=96, width=96):
         self.K = 4
-        self.height = 224
-        self.width = 224
-        self.batch_size = 32
-        self.x = tf.placeholder(tf.float32, [self.batch_size, self.height, self.width, 3])
+        self.height = height
+        self.width = width
+        self.batch_size = batch_size
+        self.x = x
         self.is_training = is_training
         self.downscaled = self.downscale(self.x)
         self.imitation = self.generator(self.downscaled, self.is_training, False)
@@ -51,7 +52,6 @@ class SRGAN:
         self.g_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator')
         return x
 
-
     def discriminator(self, x, is_training, reuse):
         with tf.variable_scope('discriminator', reuse=reuse):
             with tf.variable_scope('conv1'):
@@ -91,10 +91,9 @@ class SRGAN:
                 x = lrelu(x)
             with tf.variable_scope('softmax'):
                 x = full_connection_layer(x, 1)
-                
+
         self.d_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator')
         return x
-
 
     def downscale(self, x):
         K = self.K
@@ -105,7 +104,6 @@ class SRGAN:
         weight = tf.constant(arr, dtype=tf.float32)
         downscaled = tf.nn.conv2d(x, weight, strides=[1, K, K, 1], padding='SAME')
         return downscaled
-
 
     def inference_losses(self, x, imitation, true_output, fake_output):
         def inference_content_loss(x, imitation):
@@ -118,15 +116,18 @@ class SRGAN:
 
         def inference_adv_loss(true_output, fake_output):
             alpha = 1e-3
-            g_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.ones_like(fake_output))
+            g_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.ones_like(fake_output)) * alpha
             d_loss_true = tf.nn.sigmoid_cross_entropy_with_logits(logits=true_output, labels=tf.ones_like(true_output))
             d_loss_fake = tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.zeros_like(fake_output))
             d_loss = (d_loss_true + d_loss_fake) / 2
-            return g_loss * alpha, d_loss
+
+            tf.summary.histogram('g_loss', g_loss)
+            tf.summary.histogram('d_loss_true', d_loss_true)
+            tf.summary.histogram('d_loss_fake', d_loss_fake)
+            return g_loss, d_loss
 
         content_loss = inference_content_loss(x, imitation)
         generator_loss, discriminator_loss = inference_adv_loss(true_output, fake_output)
         g_loss = content_loss + generator_loss
         d_loss = discriminator_loss
         return g_loss, d_loss
-
