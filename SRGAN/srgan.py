@@ -121,9 +121,9 @@ class SRGAN:
             d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.zeros_like(fake_output)))
             d_loss = (d_loss_true + d_loss_fake) / 2
 
-            tf.summary.histogram('g_loss', g_loss)
-            tf.summary.histogram('d_loss_true', d_loss_true)
-            tf.summary.histogram('d_loss_fake', d_loss_fake)
+            tf.summary.scalar('g_loss', g_loss)
+            tf.summary.scalar('d_loss_true', d_loss_true)
+            tf.summary.scalar('d_loss_fake', d_loss_fake)
             return g_loss, d_loss
 
         content_loss = inference_content_loss(x, imitation)
