@@ -15,7 +15,7 @@ class SRGAN:
         self.is_training = is_training
         self.downscaled = self.downscale(self.x)
         self.imitation = self.generator(self.downscaled, self.is_training, False)
-        tf.summary.image(self.imitation)
+        tf.summary.image('fake_image', self.imitation)
         self.true_output = self.discriminator(self.x, self.is_training, False)
         self.fake_output = self.discriminator(self.imitation, self.is_training, True)
         self.g_loss, self.d_loss = self.inference_losses(self.x, self.imitation, self.true_output, self.fake_output)
@@ -98,7 +98,7 @@ class SRGAN:
         return x
 
     def downscale(self, x):
-        downscaled = tf.image.resize_images(x, [self.batch_size, self.height / self.K, self.width / self.K], method=tf.image.ResizeMethod.BICUBIC)
+        downscaled = tf.image.resize_images(x, [self.height / self.K, self.width / self.K], method=tf.image.ResizeMethod.BICUBIC)
         return downscaled
 
     def inference_losses(self, x, imitation, true_output, fake_output):
@@ -107,20 +107,21 @@ class SRGAN:
             x_phi = vgg.conv5_4
             vgg.build(imitation)
             imitation_phi = vgg.conv5_4
-            content_loss = (x_phi - imitation_phi) ** 2
-            return tf.reduce_mean(content_loss)
+            content_loss = tf.reduce_mean(tf.square(x_phi - imitation_phi))
+            tf.summary.scalar('content_loss', content_loss)
+            return content_loss
 
         def inference_adv_loss(true_output, fake_output):
             alpha = 1e-3
-            g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.ones_like(fake_output))) * alpha
+            g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.ones_like(fake_output)))
             d_loss_true = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=true_output, labels=tf.ones_like(true_output)))
             d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.zeros_like(fake_output)))
             d_loss = (d_loss_true + d_loss_fake) / 2
 
-            tf.summary.scalar('g_loss', g_loss)
+            tf.summary.scalar('generator_loss', g_loss)
             tf.summary.scalar('d_loss_true', d_loss_true)
             tf.summary.scalar('d_loss_fake', d_loss_fake)
-            return g_loss, d_loss
+            return g_loss * alpha, d_loss
 
         content_loss = inference_content_loss(x, imitation)
         generator_loss, discriminator_loss = inference_adv_loss(true_output, fake_output)
