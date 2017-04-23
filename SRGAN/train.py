@@ -4,13 +4,16 @@ import math
 import pdb
 from srgan import SRGAN
 
-learning_rate = 1e-3
+initial_learning_rate = 0.1
+epoch_step = 150
+decay_factor = 0.1
 batch_size = 16
 height = 96
 width = 96
 channels = 3
 dataset = '../lfw/train'
-log_dir = './backup'
+log_dir = './log'
+model_dir = './model'
 
 
 def train():
@@ -28,8 +31,11 @@ def train():
     sess = tf.Session()
     with sess.as_default():
         init_queue.run()
-        g_train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(model.g_loss, var_list=model.g_variables)
-        d_train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(model.d_loss, var_list=model.d_variables)
+        global_step = tf.Variable(0, name='global_step')
+        update_global_step = tf.assign(global_step, global_step + 1)
+        rate = tf.train.exponential_decay(initial_learning_rate, global_step, epoch_step, decay_factor)
+        g_train_op = tf.train.AdamOptimizer(learning_rate=rate).minimize(model.g_loss, var_list=model.g_variables)
+        d_train_op = tf.train.AdamOptimizer(learning_rate=rate).minimize(model.d_loss, var_list=model.d_variables)
 
         sess.run(tf.global_variables_initializer())
 
@@ -45,13 +51,16 @@ def train():
             summary_writer.add_run_metadata(run_metadata, 'step%03d' % step)
             summary_str, g_loss, d_loss = sess.run([summary, g_train_op, d_train_op], feed_dict={x: x_batch})
             summary_writer.add_summary(summary_str, step)
-            print('step: %d' % (step))
+            sess.run(update_global_step)
+            print('step: %d' % (step + 1))
 
             if step % 20 == 0 and step != 0:
-                checkpoint_file = os.path.join(log_dir, 'model.ckpt')
+                checkpoint_file = os.path.join(model_dir, 'model.ckpt')
                 saver.save(sess, checkpoint_file, global_step=step)
 
         summary_writer.close()
+
+    return d_train_op, g_train_op
 
 
 def get_image_paths(train_dir):
