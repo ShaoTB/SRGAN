@@ -105,13 +105,17 @@ class SRGAN:
         def inference_content_loss(x, imitation):
             vgg.build(x)
             x_phi = vgg.conv5_4
+            tf.summary.histogram('original_phi', x_phi)
             vgg.build(imitation)
             imitation_phi = vgg.conv5_4
+            tf.summary.histogram('generator_phi', imitation_phi)
             content_loss = tf.reduce_mean(tf.square(x_phi - imitation_phi))
             tf.summary.scalar('content_loss', content_loss)
             return content_loss
 
         def inference_adv_loss(true_output, fake_output):
+            tf.summary.histogram('sample_discrimination', true_output)
+            tf.summary.histogram('generator_discrimination', fake_output)
             alpha = 1e-3
             g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_output, labels=tf.ones_like(fake_output)))
             d_loss_true = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=true_output, labels=tf.ones_like(true_output)))
@@ -119,8 +123,8 @@ class SRGAN:
             d_loss = (d_loss_true + d_loss_fake) / 2
 
             tf.summary.scalar('generator_loss', g_loss)
-            tf.summary.scalar('d_loss_true', d_loss_true)
-            tf.summary.scalar('d_loss_fake', d_loss_fake)
+            tf.summary.scalar('discriminator_loss_sample', d_loss_true)
+            tf.summary.scalar('discriminator_loss_generator', d_loss_fake)
             return g_loss * alpha, d_loss
 
         content_loss = inference_content_loss(x, imitation)
