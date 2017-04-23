@@ -4,7 +4,7 @@ import math
 import pdb
 from srgan import SRGAN
 
-initial_learning_rate = 0.1
+initial_learning_rate = 0.01
 epoch_step = 150
 decay_factor = 0.1
 batch_size = 16
