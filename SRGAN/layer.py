@@ -69,4 +69,3 @@ def pixel_shuffle_layer(x, r, n_split):
     xc = tf.split(x, n_split, 3)
     x = tf.concat([PS(x_, r) for x_ in xc], 3)
     return x
-    
