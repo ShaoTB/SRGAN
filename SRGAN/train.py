@@ -1,6 +1,5 @@
 import os
 import tensorflow as tf
-import math
 from srgan import SRGAN
 
 initial_learning_rate = 0.002
@@ -10,7 +9,7 @@ batch_size = 32
 height = 96
 width = 96
 channels = 3
-dataset = '../lfw/train'
+dataset = ['../lfw/train']
 log_dir = './log'
 model_dir = './model'
 
@@ -21,8 +20,7 @@ def train():
 
     filename_list = get_image_paths(dataset)
     count = len(filename_list)
-    loop = int(math.floor(count / batch_size))
-
+    loop = int(count / batch_size)
     queue = tf.RandomShuffleQueue(count, batch_size, tf.string, shapes=())
     init_queue = queue.enqueue_many((filename_list,))
     image = queue.dequeue()
@@ -38,13 +36,16 @@ def train():
         sess.run(tf.global_variables_initializer())
 
         saver = tf.train.Saver()
+        ckpt = tf.train.get_checkpoint_state(model_dir)
+        if ckpt:
+            saver = tf.train.Saver()
+            saver.restore(sess, ckpt.model_checkpoint_path)
 
         summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
         summary = tf.summary.merge_all()
         for epoch in xrange(epoch_times):
             init_queue.run()
-
-            for step in xrange(loop):
+            for step in xrange(loop - 1):
                 print('epoch:%d step: %d' % (epoch, step))
                 x_batch = [get_image(image.eval()) for i in xrange(batch_size)]
                 run_metadata = tf.RunMetadata()
@@ -53,23 +54,25 @@ def train():
                 summary_writer.add_summary(summary_str, step)
 
                 if global_step.eval() % 20 == 0:
-                    checkpoint_file = os.path.join(model_dir, 'model.ckpt')
-                    saver.save(sess, checkpoint_file, global_step=step)
-
+                    checkpoint_file = os.path.join(model_dir, 'model.latest')
+                    saver.save(sess, checkpoint_file)
                 sess.run(update_global_step)
-
         summary_writer.close()
 
     return d_train_op, g_train_op
 
 
-def get_image_paths(train_dir):
-    filename_list = os.listdir(train_dir)
-    filename_list = [os.path.join(train_dir, filename_list[i]) for i in xrange(len(filename_list))]
+def get_image_paths(dir_list):
+    filename_list = []
+    for train_dir in dir_list:
+        filename = os.listdir(train_dir)
+        filename = [os.path.join(train_dir, filename[i]) for i in xrange(len(filename))]
+        filename_list.extend(filename)
     return filename_list
 
 
 def get_image(image_path):
+    print(image_path)
     file = tf.read_file(image_path)
     image = tf.image.decode_image(file, channels=channels)
     sess = tf.get_default_session()

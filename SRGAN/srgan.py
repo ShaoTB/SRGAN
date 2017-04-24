@@ -126,7 +126,7 @@ class SRGAN:
 
         content_loss = inference_content_loss(x, imitation)
         generator_loss, discriminator_loss = inference_adv_loss(true_output, fake_output)
-        g_loss = 1e-6 * content_loss + generator_loss
+        g_loss = content_loss + generator_loss
         tf.summary.scalar('generator_loss', g_loss)
         d_loss = discriminator_loss
         tf.summary.scalar('discriminator_loss', d_loss)
