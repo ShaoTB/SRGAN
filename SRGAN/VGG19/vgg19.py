@@ -27,6 +27,7 @@ class Vgg19:
         :param rgb: rgb image [batch, height, width, 3] values scaled [0, 1]
         """
 
+        rgb = tf.image.resize_images(rgb, [224, 224])
         start_time = time.time()
         print("build model started")
         rgb_scaled = rgb * 255.0

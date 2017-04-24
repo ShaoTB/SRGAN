@@ -1,9 +1,6 @@
 from layer import *
 from VGG19.vgg19 import *
 
-vgg = Vgg19()
-
-
 class SRGAN:
     def __init__(self, x, is_training=False, batch_size=32, height=96, width=96, channels=3):
         self.K = 4
@@ -11,6 +8,7 @@ class SRGAN:
         self.width = width
         self.batch_size = batch_size
         self.channels = channels
+        self.vgg = Vgg19()
         self.x = x
         self.is_training = is_training
         self.downscaled = self.downscale(self.x)
@@ -103,11 +101,11 @@ class SRGAN:
 
     def inference_losses(self, x, imitation, true_output, fake_output):
         def inference_content_loss(x, imitation):
-            vgg.build(x)
-            x_phi = vgg.conv5_4
+            self.vgg.build(x)
+            x_phi = self.vgg.conv5_4
             tf.summary.histogram('original_phi', x_phi)
-            vgg.build(imitation)
-            imitation_phi = vgg.conv5_4
+            self.vgg.build(imitation)
+            imitation_phi = self.vgg.conv5_4
             tf.summary.histogram('generator_phi', imitation_phi)
             content_loss = tf.reduce_mean(tf.square(x_phi - imitation_phi))
             tf.summary.scalar('content_loss', content_loss)
@@ -128,7 +126,7 @@ class SRGAN:
 
         content_loss = inference_content_loss(x, imitation)
         generator_loss, discriminator_loss = inference_adv_loss(true_output, fake_output)
-        g_loss = 1e-7 * content_loss + generator_loss
+        g_loss = 1e-6 * content_loss + generator_loss
         tf.summary.scalar('generator_loss', g_loss)
         d_loss = discriminator_loss
         tf.summary.scalar('discriminator_loss', d_loss)

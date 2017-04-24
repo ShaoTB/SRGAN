@@ -3,7 +3,7 @@ import tensorflow as tf
 import math
 from srgan import SRGAN
 
-initial_learning_rate = 0.001
+initial_learning_rate = 0.002
 epoch_times = 10
 decay_factor = 1
 batch_size = 32
