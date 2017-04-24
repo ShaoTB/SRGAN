@@ -45,7 +45,7 @@ def train():
             init_queue.run()
 
             for step in xrange(loop):
-                print('epoch:%d step: %d' % (step, epoch))
+                print('epoch:%d step: %d' % (epoch, step))
                 x_batch = [get_image(image.eval()) for i in xrange(batch_size)]
                 run_metadata = tf.RunMetadata()
                 summary_writer.add_run_metadata(run_metadata, 'step%03d' % step)
