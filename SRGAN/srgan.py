@@ -13,7 +13,7 @@ class SRGAN:
         self.is_training = is_training
         self.downscaled = self.downscale(self.x)
         self.imitation = self.generator(self.downscaled, self.is_training, False)
-        tf.summary.image('fake_image', self.imitation)
+        tf.summary.image('hr_image', self.imitation)
         self.true_output = self.discriminator(self.x, self.is_training, False)
         self.fake_output = self.discriminator(self.imitation, self.is_training, True)
         self.g_loss, self.d_loss = self.inference_losses(self.x, self.imitation, self.true_output, self.fake_output)
@@ -96,7 +96,9 @@ class SRGAN:
         return x
 
     def downscale(self, x):
+        tf.summary.image('original_image', x)
         downscaled = tf.image.resize_images(x, [self.height / self.K, self.width / self.K], method=tf.image.ResizeMethod.BICUBIC)
+        tf.summary.image('lr_image', downscaled)
         return downscaled
 
     def inference_losses(self, x, imitation, true_output, fake_output):
