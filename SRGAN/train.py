@@ -49,7 +49,7 @@ def train():
                 print('epoch:%d step: %d' % (epoch, step))
                 x_batch = [get_image(image.eval()) for i in xrange(batch_size)]
                 run_metadata = tf.RunMetadata()
-                summary_writer.add_run_metadata(run_metadata, 'step%03d' % epoch * loop + step)
+                summary_writer.add_run_metadata(run_metadata, 'step%03d' % (epoch * loop + step))
                 summary_str, d_loss, g_loss = sess.run([summary, d_train_op, g_train_op], feed_dict={x: x_batch})
                 summary_writer.add_summary(summary_str, step)
 
