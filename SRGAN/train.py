@@ -21,7 +21,7 @@ def train():
     filename_list = get_image_paths(dataset)
     count = len(filename_list)
     loop = int(count / batch_size)
-    queue = tf.RandomShuffleQueue(count, batch_size, tf.string, shapes=())
+    queue = tf.RandomShuffleQueue(2 * count, batch_size, tf.string, shapes=())
     init_queue = queue.enqueue_many((filename_list,))
     image = queue.dequeue()
 
@@ -45,7 +45,7 @@ def train():
         summary = tf.summary.merge_all()
         for epoch in xrange(epoch_times):
             init_queue.run()
-            for step in xrange(loop - 1):
+            for step in xrange(loop):
                 print('epoch:%d step: %d' % (epoch, step))
                 x_batch = [get_image(image.eval()) for i in xrange(batch_size)]
                 run_metadata = tf.RunMetadata()
