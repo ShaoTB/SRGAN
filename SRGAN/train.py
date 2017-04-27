@@ -1,8 +1,9 @@
 import os
 import tensorflow as tf
 from srgan import SRGAN
+import time
 
-initial_learning_rate = 0.002
+initial_learning_rate = 0.0005
 epoch_times = 10
 decay_factor = 1
 batch_size = 32
@@ -21,11 +22,12 @@ def train():
     filename_list = get_image_paths(dataset)
     count = len(filename_list)
     loop = int(count / batch_size)
-    queue = tf.RandomShuffleQueue(2 * count, batch_size, tf.string, shapes=())
+    queue = tf.RandomShuffleQueue(10 * count, batch_size, tf.string, shapes=())
     init_queue = queue.enqueue_many((filename_list,))
     image = queue.dequeue()
 
-    sess = tf.Session()
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
+    sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     with sess.as_default():
         global_step = tf.Variable(0, name='global_step')
         update_global_step = tf.assign(global_step, global_step + 1)
@@ -43,20 +45,26 @@ def train():
 
         summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
         summary = tf.summary.merge_all()
+        run_metadata = tf.RunMetadata()
         for epoch in xrange(epoch_times):
             init_queue.run()
-            for step in xrange(loop):
-                print('epoch:%d step: %d' % (epoch, step))
-                x_batch = [get_image(image.eval()) for i in xrange(batch_size)]
-                run_metadata = tf.RunMetadata()
-                summary_writer.add_run_metadata(run_metadata, 'step%03d' % (epoch * loop + step))
-                summary_str, d_loss, g_loss = sess.run([summary, d_train_op, g_train_op], feed_dict={x: x_batch})
-                summary_writer.add_summary(summary_str, step)
+        while queue.size().eval() > batch_size:
+            start_time = time.time()
+            step = global_step.eval()
+            print('step: %d' % step)
+            x_batch = [get_image(image.eval()) for i in xrange(batch_size)]
+            summary_str, d_loss, g_loss = sess.run([summary, d_train_op, g_train_op], feed_dict={x: x_batch})
+            summary_writer.add_summary(summary_str, step)
 
-                if global_step.eval() % 20 == 0:
-                    checkpoint_file = os.path.join(model_dir, 'model.latest')
-                    saver.save(sess, checkpoint_file)
-                sess.run(update_global_step)
+            if global_step.eval() % 20 == 0:
+                checkpoint_file = os.path.join(model_dir, 'model.latest')
+                saver.save(sess, checkpoint_file)
+
+            if global_step.eval() % 100 == 0:
+                summary_writer.add_run_metadata(run_metadata, 'step%03d' % step)
+
+            sess.run(update_global_step)
+            print("step cost: %ds" % (time.time() - start_time))
         summary_writer.close()
 
     return d_train_op, g_train_op
@@ -72,7 +80,6 @@ def get_image_paths(dir_list):
 
 
 def get_image(image_path):
-    print(image_path)
     file = tf.read_file(image_path)
     image = tf.image.decode_image(file, channels=channels)
     sess = tf.get_default_session()
