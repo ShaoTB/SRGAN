@@ -22,7 +22,7 @@ class SRGAN:
         with tf.variable_scope('generator', reuse=reuse):
             with tf.variable_scope('deconv1'):
                 x = deconv_layer(x, [3, 3, 64, 3], [self.batch_size, self.height / 4, self.width / 4, 64], 1, 'deconv1')
-            x = tf.nn.relu(x)
+                x = tf.nn.relu(x)
             shortcut = x
             for i in range(5):
                 mid = x

@@ -4,7 +4,7 @@ from srgan import SRGAN
 import time
 import resource
 
-initial_learning_rate = 0.0005
+initial_learning_rate = 0.00001
 epoch_times = 10
 decay_factor = 1
 batch_size = 32
